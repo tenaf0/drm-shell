@@ -1,0 +1,57 @@
+plugins {
+    // Apply the java Plugin to add support for Java.
+    id 'java'
+}
+
+repositories {
+    // Use Maven Central for resolving dependencies.
+    mavenCentral()
+    maven {
+        url "https://packages.jetbrains.team/maven/p/skija/maven"
+    }
+}
+
+dependencies {
+    constraints {
+        // Define dependency versions as constraints
+//        implementation 'org.apache.commons:commons-text:1.9'
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(20)
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += "--enable-preview"
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs += "--enable-preview"
+}
+
+ext.findHeader = { String libName ->
+    def envMap = System.getenv()
+    def envVar = "${libName}_HEADERS".toString()
+    def header = envMap.get(envVar)
+    if (header == null) {
+        throw new IllegalArgumentException("Could not find environment variable $envVar")
+    }
+    if (!file(header).exists()) {
+        throw new IllegalArgumentException("The path stored in $envVar, $header is invalid")
+    }
+
+    return header
+}
+
+testing {
+    suites {
+        // Configure the built-in test suite
+        test {
+            // Use JUnit Jupiter test framework
+            useJUnitJupiter('5.9.1')
+        }
+    }
+}

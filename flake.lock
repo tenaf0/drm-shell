@@ -1,0 +1,122 @@
+{
+  "nodes": {
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1667395993,
+        "narHash": "sha256-nuEHfE/LcWyuSWnS8t12N1wc105Qtau+/OdUAjtQ0rA=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "5aed5285a952e0b949eb3ba02c12fa4fcfef535f",
+        "type": "github"
+      },
+      "original": {
+        "id": "flake-utils",
+        "type": "indirect"
+      }
+    },
+    "flake-utils_2": {
+      "locked": {
+        "lastModified": 1667395993,
+        "narHash": "sha256-nuEHfE/LcWyuSWnS8t12N1wc105Qtau+/OdUAjtQ0rA=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "5aed5285a952e0b949eb3ba02c12fa4fcfef535f",
+        "type": "github"
+      },
+      "original": {
+        "id": "flake-utils",
+        "type": "indirect"
+      }
+    },
+    "jextract": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-jdk20": "nixpkgs-jdk20"
+      },
+      "locked": {
+        "lastModified": 1671278360,
+        "narHash": "sha256-/iEq2sUiMJrJDrZSfdk45b1fCP+asYP3hu+5aC+3XVQ=",
+        "owner": "tenaf0",
+        "repo": "jextract-flake",
+        "rev": "922ee2df927792d31e4eb153ec46435e03448ebb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tenaf0",
+        "repo": "jextract-flake",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1671249438,
+        "narHash": "sha256-5e+CcnbZA3/i2BRXbnzRS52Ly67MUNdZR+Zpbb2C65k=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "067bfc6c90a301572cec7da48f09c447a9a8eae0",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs-jdk20": {
+      "locked": {
+        "lastModified": 1671277997,
+        "narHash": "sha256-BPBxZV2ED7eD6wGXx6or3Q6Gw+ts6mUO59L07ONDIPI=",
+        "owner": "tenaf0",
+        "repo": "nixpkgs",
+        "rev": "8d82d330df8a2e938445416157ea4c3f47e1dcbc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tenaf0",
+        "ref": "openjdk20",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-jdk20_2": {
+      "locked": {
+        "lastModified": 1671277997,
+        "narHash": "sha256-BPBxZV2ED7eD6wGXx6or3Q6Gw+ts6mUO59L07ONDIPI=",
+        "owner": "tenaf0",
+        "repo": "nixpkgs",
+        "rev": "8d82d330df8a2e938445416157ea4c3f47e1dcbc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tenaf0",
+        "ref": "openjdk20",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1672158941,
+        "narHash": "sha256-A6KENZ8/ke7YXpmpwVH4nTf5hLreFEUWW9Q+Z9jdomg=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "23d58dae80cb6a9e14839be4e626ec4bc0963e32",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "jextract": "jextract",
+        "nixpkgs": "nixpkgs_2",
+        "nixpkgs-jdk20": "nixpkgs-jdk20_2"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

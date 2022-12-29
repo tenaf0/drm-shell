@@ -1,0 +1,8 @@
+plugins {
+    id 'drm.shell.java-library-conventions'
+}
+
+dependencies {
+    api project(":cffi")
+    api "org.jetbrains.skija:skija-linux:0.93.1"
+}

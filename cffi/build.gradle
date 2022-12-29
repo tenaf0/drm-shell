@@ -1,0 +1,53 @@
+plugins {
+    id 'drm.shell.java-library-conventions'
+}
+
+def drmHeaderDir = layout.buildDirectory.dir("drmHeaders")
+
+sourceSets.main.java {
+    srcDir drmHeaderDir
+    exclude 'org/example/drm/**'
+}
+
+task jextract {
+    outputs.dir drmHeaderDir
+
+    doFirst {
+        mkdir drmHeaderDir
+    }
+
+    doLast {
+        exec {
+            commandLine 'jextract', "${findHeader("LIBDRM")}/include/xf86drmMode.h", '-I', "${findHeader("LINUX")}/include",
+                    '-I', "${findHeader("LIBDRM")}/include/libdrm", '--source', '-t', 'hu.garaba.drmMode', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("LIBDRM")}/include/xf86drm.h", '-I', "${findHeader("LINUX")}/include", '-I', "${findHeader("GLIBC")}/include", '-I', "${findHeader("LIBDRM")}/include/libdrm", '--source', '-t', 'hu.garaba.drm', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("LINUX")}/include/linux/fcntl.h", '-I', "${findHeader("LINUX")}/include", '--source', '-t', 'hu.garaba.linux', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("LINUX")}/include/linux/poll.h", '-I', "${findHeader("LINUX")}/include", '--source', '-t', 'hu.garaba.linux', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("LINUX")}/include/linux/mman.h", '-I', "${findHeader("LINUX")}/include", '--source', '-t', 'hu.garaba.linux', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("GLIBC")}/include/errno.h", '-I', "${findHeader("GLIBC")}/include", '--source', '-t', 'hu.garaba.glibc.errno', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("GLIBC")}/include/string.h", '-I', "${findHeader("GLIBC")}/include", '--source', '-t', 'hu.garaba.glibc.string', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("LIBINPUT")}/include/libinput.h", '-I', "${findHeader("GLIBC")}/include", '-I', "${findHeader("UDEV")}/include", '--source', '-t', 'hu.garaba.libinput', '--output', "${drmHeaderDir.get()}"
+        }
+        exec {
+            commandLine 'jextract', "${findHeader("LIBSEAT")}/include/libseat.h",  '--source', '-t', 'hu.garaba.libseat', '--output', "${drmHeaderDir.get()}"
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    dependsOn jextract
+}
