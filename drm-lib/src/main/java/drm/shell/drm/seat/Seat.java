@@ -1,19 +1,25 @@
 package drm.shell.drm.seat;
 
+import drm.shell.drm.Session;
 import hu.garaba.CWrapper;
 import hu.garaba.Pollable;
 import hu.garaba.libseat.libseat_seat_listener;
+import org.tinylog.Logger;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static hu.garaba.libseat.libseat_h.*;
 
 public class Seat implements AutoCloseable, Pollable {
     private final int sessionId;
+    private final String loginCtlSessionId;
     private final Arena arena;
     private final MemorySegment libseat;
     private final int fd;
@@ -27,10 +33,16 @@ public class Seat implements AutoCloseable, Pollable {
         this.arena = arena;
         this.libseat = libseat;
         this.fd = fd;
+
+        this.loginCtlSessionId = getActiveSession();
     }
 
     public int id() {
         return sessionId;
+    }
+
+    public String loginCtlSessionId() {
+        return loginCtlSessionId;
     }
 
     private String lazyName;
@@ -61,8 +73,16 @@ public class Seat implements AutoCloseable, Pollable {
         return libinput;
     }
 
+    public void resume() {
+        libinput.resume();
+    }
+
+    public void suspend() {
+        libinput.suspend();
+    }
+
     public void dispatch() {
-        System.out.println("Dispatching libseat event");
+        Logger.debug("Dispatching libseat event");
         CWrapper.execute(() -> libseat_dispatch(libseat, 0));
     }
 
@@ -92,7 +112,7 @@ public class Seat implements AutoCloseable, Pollable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         arena.close();
     }
 
@@ -109,6 +129,19 @@ public class Seat implements AutoCloseable, Pollable {
         }
         return new Seat(sessionId, arena, MemorySegment.ofAddress(libseat.address(), 0, arena.scope(),
                 () -> CWrapper.execute(() -> libseat_close_seat(libseat), "Failure during the closing of seat")), fd);
+    }
+
+    public String getActiveSession() {
+        try {
+            Process exec = Runtime.getRuntime().exec(new String[]{"loginctl", "-p", "ActiveSession", "show-seat", name()});
+
+            try (BufferedReader reader = exec.inputReader()) {
+                String result = reader.lines().collect(Collectors.joining());
+                return result.substring("ActiveSession=".length());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static MemorySegment createSeatListener() {
@@ -134,10 +167,13 @@ public class Seat implements AutoCloseable, Pollable {
 
     private static class SeatListener {
         public static void enableSeat(MemorySegment seat, MemorySegment userData) {
+            MemorySegment data = MemorySegment.ofAddress(userData.address(), ValueLayout.JAVA_INT.byteSize(), SegmentScope.auto());
+            Logger.debug("Activating from seatListener");
+            Session.sessions.get(data.get(ValueLayout.JAVA_INT, 0)).activate();
         }
 
         public static void disableSeat(MemorySegment seat, MemorySegment userData) {
-            System.out.println("Seat disabled");
+            Logger.debug("Seat disabled");
             CWrapper.execute(() -> libseat_disable_seat(seat), "Failure during libseat disabling");
         }
     }

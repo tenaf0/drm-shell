@@ -4,11 +4,13 @@ import drm.shell.drm.drm.*;
 import drm.shell.drm.event.KeyboardEvent;
 import drm.shell.drm.event.PointerEvent;
 import drm.shell.drm.seat.Seat;
+import hu.garaba.CWrapper;
 import hu.garaba.EventLoop;
 import hu.garaba.drm._drmEventContext;
 import org.jetbrains.skija.Canvas;
 import org.jetbrains.skija.ImageInfo;
 import org.jetbrains.skija.Surface;
+import org.tinylog.Logger;
 
 import java.io.IOException;
 import java.lang.foreign.*;
@@ -20,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static hu.garaba.drm.xf86drm_h.drmHandleEvent;
+import static hu.garaba.drm.xf86drm_h.*;
 import static hu.garaba.drmMode.xf86drmMode_h.DRM_MODE_PAGE_FLIP_EVENT;
 import static hu.garaba.drmMode.xf86drmMode_h.drmModePageFlip;
 import static hu.garaba.libinput.libinput_h.*;
@@ -43,7 +45,7 @@ public class Session implements AutoCloseable {
     public static List<Session> sessions = List.of();
 
     private final Renderer renderer;
-    private final Drm drm;
+    public final Drm drm;
     private final Seat seat;
 
     private final EventLoop eventLoop;
@@ -133,7 +135,7 @@ public class Session implements AutoCloseable {
         MemorySegment eventContext = _drmEventContext.allocate(Arena.openConfined());
         _drmEventContext.version$set(eventContext, 4);
 
-        MemorySegment vsyncHandle = null;
+        MemorySegment vsyncHandle;
         try {
             vsyncHandle = Linker.nativeLinker().upcallStub(MethodHandles.lookup().findStatic(VSync.class, "vsyncHandle", MethodType.methodType(void.class)),
                     FunctionDescriptor.ofVoid(), SegmentScope.global());
@@ -144,34 +146,68 @@ public class Session implements AutoCloseable {
         _drmEventContext.page_flip_handler$set(eventContext, vsyncHandle);
 
         eventLoop.addHandler(drm, () -> {
+            if (!active) {
+                return;
+            }
             drmHandleEvent(drm.fd, eventContext);
         });
     }
 
     private void initEventHandler() {
-        eventLoop.addHandler(seat, seat::dispatch);
-        eventLoop.addHandler(seat.libinput(), () -> {
-            seat.libinput().dispatch(e -> {
-                if (libinput_event_get_type(e) == LIBINPUT_EVENT_POINTER_MOTION()) {
-                    MemorySegment pointerEvent = libinput_event_get_pointer_event(e);
-                    double dx = libinput_event_pointer_get_dx(pointerEvent);
-                    double dy = libinput_event_pointer_get_dy(pointerEvent);
-
-                    renderer.handleEvent(this, new PointerEvent((float) dx, (float) dy));
-                } else if (libinput_event_get_type(e) == LIBINPUT_EVENT_KEYBOARD_KEY()) {
-                    MemorySegment keyboardEvent = libinput_event_get_keyboard_event(e);
-                    boolean pressed = libinput_event_keyboard_get_key_state(keyboardEvent) == LIBINPUT_KEY_STATE_PRESSED();
-                    int key = libinput_event_keyboard_get_key(keyboardEvent);
-
-                    renderer.handleEvent(this, new KeyboardEvent(pressed, (char) key));
-                }
-            });
+        eventLoop.addHandler(seat, () -> {
+            seat.dispatch();
+            activate();
         });
+        eventLoop.addHandler(seat.libinput(), () -> seat.libinput().dispatch(e -> {
+            if (libinput_event_get_type(e) == LIBINPUT_EVENT_POINTER_MOTION()) {
+                MemorySegment pointerEvent = libinput_event_get_pointer_event(e);
+                double dx = libinput_event_pointer_get_dx(pointerEvent);
+                double dy = libinput_event_pointer_get_dy(pointerEvent);
+
+                renderer.handleEvent(this, new PointerEvent((float) dx, (float) dy));
+            } else if (libinput_event_get_type(e) == LIBINPUT_EVENT_KEYBOARD_KEY()) {
+                MemorySegment keyboardEvent = libinput_event_get_keyboard_event(e);
+                boolean pressed = libinput_event_keyboard_get_key_state(keyboardEvent) == LIBINPUT_KEY_STATE_PRESSED();
+                int key = libinput_event_keyboard_get_key(keyboardEvent);
+
+                renderer.handleEvent(this, new KeyboardEvent(pressed, (char) key));
+            }
+        }));
     }
 
 
     public void start() {
         eventLoop.start();
+    }
+
+    private boolean active = true;
+
+    public void activate() {
+        String activeSession = seat.getActiveSession();
+        Logger.info("Active session now is: " + activeSession + " loginctl id: " + seat.loginCtlSessionId());
+
+        if (activeSession.equals(seat.loginCtlSessionId())) {
+            seat.resume();
+            resume();
+        } else {
+            seat.suspend();
+            pause();
+            this.active = false;
+        }
+    }
+
+    public void resume() {
+        active = true;
+        Logger.info("Setting master");
+        CWrapper.execute(() -> drmSetMaster(drm.fd), "Could not set to DRM master");
+    }
+    public void pause() {
+        active = false;
+        if (drmIsMaster(drm.fd) > 0) {
+            CWrapper.execute(() -> drmDropMaster(drm.fd), "Could not drop DRM master");
+        } else {
+            Logger.info("Trying to drop DRM master, but it is not set");
+        }
     }
 
     public void stop() {
@@ -187,6 +223,7 @@ public class Session implements AutoCloseable {
         Map.Entry<Connector, ModeInfo> modeInfoEntry = this.savedModeInfo.entrySet().stream().findAny().orElseThrow();
         drm.setMode(new Crtc(drm, modeInfoEntry.getValue().crtcId), modeInfoEntry.getKey(),
                 modeInfoEntry.getKey().info().modes().get(0), modeInfoEntry.getValue().fb());
+        pause();
 
         seat.close();
         drm.close();

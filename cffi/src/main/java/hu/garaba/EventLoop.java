@@ -25,8 +25,6 @@ public class EventLoop {
             throw new IllegalStateException("Pollable objects and event handlers have different number of elements");
         }
 
-        System.out.println(pollableList);
-
         try (final var arena = Arena.openConfined()) {
             MemorySegment pollfdArr = arena.allocateArray(pollfd.$LAYOUT(), pollableList.size());
             List<MemorySegment> pollFdList = pollfdArr.elements(pollfd.$LAYOUT()).toList();

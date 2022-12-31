@@ -4,6 +4,7 @@ import drm.shell.drm.Session;
 import hu.garaba.CWrapper;
 import hu.garaba.Pollable;
 import hu.garaba.libinput.libinput_interface;
+import org.tinylog.Logger;
 
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
@@ -64,6 +65,16 @@ public class Libinput implements Pollable {
         }
     }
 
+    public void resume() {
+        Logger.info("libinput_resume");
+        CWrapper.execute(() -> libinput_resume(libinputContext));
+    }
+
+    public void suspend() {
+        Logger.info("libinput_suspend");
+        libinput_suspend(libinputContext);
+    }
+
     private static MemorySegment createLibinputInterface() {
         try {
             Linker linker = Linker.nativeLinker();
@@ -92,12 +103,12 @@ public class Libinput implements Pollable {
         }
         static int openRestricted(MemorySegment path, int flags, MemorySegment userData) {
             MemorySegment safePath = MemorySegment.ofAddress(path.address(), Long.MAX_VALUE, SegmentScope.auto());
-            System.out.println("Opening " + safePath.getUtf8String(0));
+            Logger.debug("Opening " + safePath.getUtf8String(0));
             return (int) CWrapper.execute(() -> getSeat(userData).openDevice(safePath), "Could not open file " + safePath.getUtf8String(0));
         }
 
         static void closeRestricted(int fd, MemorySegment userData) {
-            System.out.println("Closing " + fd);
+            Logger.debug("Closing " + fd);
             getSeat(userData).closeDevice(fd);
         }
     }
