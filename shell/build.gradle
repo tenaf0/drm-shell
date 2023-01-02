@@ -15,5 +15,5 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'drm.shell.App'
+    mainClass = 'drm.shell.Main'
 }

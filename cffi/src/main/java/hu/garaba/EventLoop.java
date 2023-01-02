@@ -13,11 +13,22 @@ import static hu.garaba.linux.poll_h.POLLIN;
 public class EventLoop {
     private final List<Pollable> pollableList = new ArrayList<>();
     private final List<Runnable> eventHandlers = new ArrayList<>();
+    private final int tick;
+    private long lastTick = System.currentTimeMillis();
+    private Runnable tickHandler;
     private volatile boolean isRunning = false;
+
+    public EventLoop(int tick) {
+        this.tick = tick;
+    }
 
     public void addHandler(Pollable pollable, Runnable handler) {
         pollableList.add(pollable);
         eventHandlers.add(handler);
+    }
+
+    public void addTickHandler(Runnable handler) {
+        this.tickHandler = handler;
     }
 
     public void start() {
@@ -39,7 +50,8 @@ public class EventLoop {
 
             isRunning = true;
             while (isRunning) {
-                if (Util.poll(pollfdArr, pollableList.size(), 100)) {
+                boolean poll = Util.poll(pollfdArr, pollableList.size(), tick);
+                if (poll) {
                     IntStream.range(0, pollableList.size())
                             .forEach(i -> {
                                 MemorySegment pollfdStruct = pollFdList.get(i);
@@ -48,6 +60,11 @@ public class EventLoop {
                                     eventHandlers.get(i).run();
                                 }
                             });
+                }
+                long l = System.currentTimeMillis();
+                if (l - lastTick > tick) {
+                    lastTick = l;
+                    tickHandler.run();
                 }
             }
         }

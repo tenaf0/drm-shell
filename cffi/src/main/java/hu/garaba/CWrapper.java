@@ -9,6 +9,23 @@ import static hu.garaba.glibc.errno.errno_h.__errno_location;
 import static hu.garaba.glibc.string.string_h.strerror;
 
 public class CWrapper {
+    public static class CException extends RuntimeException {
+        public final long errorCode;
+        public final long errno;
+        public final String errorCodeMessage;
+
+        public CException(long errorCode, long errno, String errorCodeMessage, String message) {
+            super(message);
+            this.errorCode = errorCode;
+            this.errno = errno;
+            this.errorCodeMessage = errorCodeMessage;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("CException(code=%d, errno=%d, msg=%s)", errorCode, errno, getMessage());
+        }
+    }
     private static MemorySegment errnoLocation;
 
     static {
@@ -35,8 +52,7 @@ public class CWrapper {
                 errorMessage = strErrorSafe.getUtf8String(0);
             }
 
-            throw new RuntimeException(String.format("%s\nResult: %d\nError code: %d\nError msg: %s",
-                    userErrorMessage, res, errno, errorMessage));
+            throw new CException(res, errno, errorMessage, userErrorMessage);
         }
 
         return res;

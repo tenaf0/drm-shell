@@ -3,6 +3,7 @@ package drm.shell.drm;
 import drm.shell.drm.drm.*;
 import drm.shell.drm.event.KeyboardEvent;
 import drm.shell.drm.event.PointerEvent;
+import drm.shell.drm.event.TickEvent;
 import drm.shell.drm.seat.Seat;
 import hu.garaba.CWrapper;
 import hu.garaba.EventLoop;
@@ -56,7 +57,7 @@ public class Session implements AutoCloseable {
         this.drm = drm;
         this.seat = seat;
 
-        this.eventLoop = new EventLoop();
+        this.eventLoop = new EventLoop(500);
     }
 
     public static Session createSession(Renderer renderer, Path videoCard) throws IOException {
@@ -87,10 +88,19 @@ public class Session implements AutoCloseable {
         static int frame = 0;
 
         static Renderer renderer;
+        static boolean active = true;
 
         static void vsyncHandle() {
+            if (!active) {
+                return;
+            }
             frame++;
             renderer.render(canvases[frame % 2]);
+            modeInfo = new ModeInfo(modeInfo.fd, modeInfo.crtcId, fbs[frame % 2].fbId);
+            drmModePageFlip(modeInfo.fd, modeInfo.crtcId, modeInfo.fb, DRM_MODE_PAGE_FLIP_EVENT(), MemorySegment.NULL);
+        }
+
+        static void vsyncResume() {
             modeInfo = new ModeInfo(modeInfo.fd, modeInfo.crtcId, fbs[frame % 2].fbId);
             drmModePageFlip(modeInfo.fd, modeInfo.crtcId, modeInfo.fb, DRM_MODE_PAGE_FLIP_EVENT(), MemorySegment.NULL);
         }
@@ -111,6 +121,7 @@ public class Session implements AutoCloseable {
                 .findFirst().orElseThrow();
         crtc.sync();
 
+        Logger.info("Modes: {}", connector.info().modes());
         Mode mode = connector.info().modes().get(0);
         this.savedModeInfo = Map.of(connector, new ModeInfo(drm.fd, crtc.crtcId, crtc.info().bufferId()));
 
@@ -145,12 +156,7 @@ public class Session implements AutoCloseable {
 
         _drmEventContext.page_flip_handler$set(eventContext, vsyncHandle);
 
-        eventLoop.addHandler(drm, () -> {
-            if (!active) {
-                return;
-            }
-            drmHandleEvent(drm.fd, eventContext);
-        });
+        eventLoop.addHandler(drm, () -> drmHandleEvent(drm.fd, eventContext));
     }
 
     private void initEventHandler() {
@@ -173,14 +179,13 @@ public class Session implements AutoCloseable {
                 renderer.handleEvent(this, new KeyboardEvent(pressed, (char) key));
             }
         }));
+        eventLoop.addTickHandler(() -> renderer.handleEvent(this, new TickEvent()));
     }
 
 
     public void start() {
         eventLoop.start();
     }
-
-    private boolean active = true;
 
     public void activate() {
         String activeSession = seat.getActiveSession();
@@ -189,20 +194,21 @@ public class Session implements AutoCloseable {
         if (activeSession.equals(seat.loginCtlSessionId())) {
             seat.resume();
             resume();
+            VSync.vsyncResume();
         } else {
             seat.suspend();
             pause();
-            this.active = false;
+            VSync.active = false;
         }
     }
 
     public void resume() {
-        active = true;
+        VSync.active = true;
         Logger.info("Setting master");
         CWrapper.execute(() -> drmSetMaster(drm.fd), "Could not set to DRM master");
     }
     public void pause() {
-        active = false;
+        VSync.active = false;
         if (drmIsMaster(drm.fd) > 0) {
             CWrapper.execute(() -> drmDropMaster(drm.fd), "Could not drop DRM master");
         } else {
@@ -220,9 +226,16 @@ public class Session implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        Map.Entry<Connector, ModeInfo> modeInfoEntry = this.savedModeInfo.entrySet().stream().findAny().orElseThrow();
-        drm.setMode(new Crtc(drm, modeInfoEntry.getValue().crtcId), modeInfoEntry.getKey(),
-                modeInfoEntry.getKey().info().modes().get(0), modeInfoEntry.getValue().fb());
+        try {
+            CWrapper.execute(() -> drmSetMaster(drm.fd), "Could not set to DRM master");
+            Map.Entry<Connector, ModeInfo> modeInfoEntry = this.savedModeInfo.entrySet().stream().findAny().orElseThrow();
+            drm.setMode(new Crtc(drm, modeInfoEntry.getValue().crtcId), modeInfoEntry.getKey(),
+                    modeInfoEntry.getKey().info().modes().get(0), modeInfoEntry.getValue().fb());
+        } catch (Exception e) {
+            Logger.info("Could not restore mode settings to original. Maybe this is not the active session?");
+            Logger.info(e);
+        }
+
         pause();
 
         seat.close();
