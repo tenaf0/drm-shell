@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 
 public class App implements Renderer {
 
+    private static final float POINTER_SIZE = 10.0f;
+
     private Queue<Consumer<App>> actionQueue = new ArrayBlockingQueue<>(10);
 
     private static class AppState {
@@ -36,12 +38,12 @@ public class App implements Renderer {
     private Text keyText;
 
     public App() {
-        scene = new Scene(Rect.makeXYWH(0f, 0f, 1920f, 1080f), new Paint().setColor(Color.makeRGB(210,210,210)));
-        final var topBar = new Scene(Rect.makeXYWH(0f, 0f, 1920f, 30f), new Paint().setColor(Color.makeRGB(20, 20, 20)));
+        scene = new Scene(Rect.makeXYWH(0f, 0f, 2560f, 1440f), new Paint().setColor(Color.makeRGB(210,210,210)));
+        final var topBar = new Scene(Rect.makeXYWH(0f, 0f, 2560f, 30f), new Paint().setColor(Color.makeRGB(20, 20, 20)));
         topBar.setParent(scene);
 
         final var clock = new Text(topBar, "Clock", new Paint().setColor(Color.makeRGB(255, 255, 255)),
-                new Position(1830f, 5f), 90f);
+                new Position(2470f, 5f), 90f);
         keyText = new Text(scene, "Key press", new Paint().setColor(Color.makeRGB(169, 30, 30)),
                 new Position(60f, 100f), 200f);
         Text freeText = new Text(scene, "", new Paint().setColor(Color.makeRGB(169, 30, 30)),
@@ -79,10 +81,10 @@ public class App implements Renderer {
     public void handleEvent(Session session, Event event) {
         switch (event) {
             case PointerEvent(float dx,float dy) -> {
-                scene.damage(Rect.makeXYWH(AppState.x, AppState.y, 10f, 10f));
+                scene.damage(Rect.makeXYWH(AppState.x, AppState.y, POINTER_SIZE, POINTER_SIZE));
 
-                AppState.x = Math.min(Math.max(0, AppState.x + dx), 1920f);
-                AppState.y = Math.min(Math.max(0.0f, AppState.y + dy), 1080f);
+                AppState.x = Math.min(Math.max(0, AppState.x + dx), scene.boundingBox().getRight() - POINTER_SIZE);
+                AppState.y = Math.min(Math.max(0.0f, AppState.y + dy), scene.boundingBox().getBottom() - POINTER_SIZE);
                 Logger.debug("{} {}\n", AppState.x, AppState.y);
             }
             case KeyboardEvent(boolean b,char key) -> {
@@ -126,7 +128,7 @@ public class App implements Renderer {
         scene.draw(canvas);
 //        canvas.restore();
 
-        canvas.drawRect(Rect.makeXYWH(AppState.x, AppState.y, 10, 10), green);
+        canvas.drawRect(Rect.makeXYWH(AppState.x, AppState.y, POINTER_SIZE, POINTER_SIZE), red);
         renderCount++;
         renderTime += System.nanoTime()-l;
         if (renderCount % 500 == 0) {
