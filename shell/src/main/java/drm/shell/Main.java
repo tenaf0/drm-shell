@@ -17,12 +17,12 @@ public class Main {
 
             Thread watchdog = new Thread(() -> {
                 try {
-                    Thread.sleep(52000);
+                    Thread.sleep(30*60*1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
                 Logger.info("Watchdog expired");
-                session.stop();
+                 session.stop();
             });
             watchdog.setDaemon(true);
             watchdog.start();

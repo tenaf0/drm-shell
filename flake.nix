@@ -10,10 +10,11 @@
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
       openjdk20 = nixpkgs-jdk20.legacyPackages.${system}.openjdk20;
+      gradle = pkgs.gradle.override { javaToolchains = [ openjdk20 ]; };
       runtimeLibPath = nixpkgs.lib.makeLibraryPath [ pkgs.libdrm pkgs.udev pkgs.libinput pkgs.libseat ];
     in {
       devShell = pkgs.mkShell {
-        buildInputs = [ jextract.outputs.defaultPackage.${system} pkgs.openjdk17 ];
+        buildInputs = [ jextract.outputs.defaultPackage.${system} gradle ];
         shellHook = ''
           export LINUX_HEADERS=${pkgs.linuxHeaders}
           export GLIBC_HEADERS=${pkgs.glibc.dev}
@@ -25,6 +26,8 @@
           export LD_LIBRARY_PATH=${runtimeLibPath}:$LD_LIBRARY_PATH
 
           export JDK20=${openjdk20}/lib/openjdk
+	      export JAVA_HOME=$JDK20
+          export JAVA_OPTS="--enable-preview"
         '';
       };
     });

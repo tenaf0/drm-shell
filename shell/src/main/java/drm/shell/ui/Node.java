@@ -12,5 +12,6 @@ public sealed interface Node permits Scene, Text {
     List<Node> children();
     void addChild(Node node);
     void draw(Canvas canvas);
+    void forceDraw(Canvas canvas);
     void damage(Rect rect);
 }

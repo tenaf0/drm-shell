@@ -18,10 +18,7 @@ import java.lang.foreign.*;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static hu.garaba.drm.xf86drm_h.*;
 import static hu.garaba.drmMode.xf86drmMode_h.DRM_MODE_PAGE_FLIP_EVENT;
@@ -50,7 +47,6 @@ public class Session implements AutoCloseable {
     private final Seat seat;
 
     private final EventLoop eventLoop;
-    private Map<Connector, ModeInfo> savedModeInfo;
 
     private Session(Renderer renderer, Drm drm, Seat seat) {
         this.renderer = renderer;
@@ -74,6 +70,9 @@ public class Session implements AutoCloseable {
         session.initEventHandler();
         session.initDrm();
 
+        Map.Entry<Connector, ModeInfo> connectorMode = VSync.savedModeInfo.entrySet().stream().findAny().orElseThrow();
+        renderer.init(connectorMode.getKey().info().modes().get(0).hdisplay(), connectorMode.getKey().info().modes().get(0).vdisplay());
+
         return session;
     }
 
@@ -82,6 +81,7 @@ public class Session implements AutoCloseable {
     private static class VSync {
         static FrameBuffer[] fbs;
         static Canvas[] canvases;
+        static Map<Connector, ModeInfo> savedModeInfo;
 
         static ModeInfo modeInfo;
 
@@ -123,7 +123,7 @@ public class Session implements AutoCloseable {
 
         Logger.info("Modes: {}", connector.info().modes());
         Mode mode = connector.info().modes().get(0);
-        this.savedModeInfo = Map.of(connector, new ModeInfo(drm.fd, crtc.crtcId, crtc.info().bufferId()));
+        VSync.savedModeInfo = Map.of(connector, new ModeInfo(drm.fd, crtc.crtcId, crtc.info().bufferId()));
 
         FrameBuffer frameBuffer1 = FrameBuffer.create(drm, mode.hdisplay(), mode.vdisplay());
         FrameBuffer frameBuffer2 = FrameBuffer.create(drm, mode.hdisplay(), mode.vdisplay());
@@ -228,7 +228,7 @@ public class Session implements AutoCloseable {
     public void close() throws Exception {
         try {
             CWrapper.execute(() -> drmSetMaster(drm.fd), "Could not set to DRM master");
-            Map.Entry<Connector, ModeInfo> modeInfoEntry = this.savedModeInfo.entrySet().stream().findAny().orElseThrow();
+            Map.Entry<Connector, ModeInfo> modeInfoEntry = VSync.savedModeInfo.entrySet().stream().findAny().orElseThrow();
             drm.setMode(new Crtc(drm, modeInfoEntry.getValue().crtcId), modeInfoEntry.getKey(),
                     modeInfoEntry.getKey().info().modes().get(0), modeInfoEntry.getValue().fb());
         } catch (Exception e) {

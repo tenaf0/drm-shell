@@ -86,8 +86,12 @@ public final class Text implements Node {
             return;
         }
 
+        forceDraw(canvas);
+    }
+
+    @Override
+    public void forceDraw(Canvas canvas) {
         Logger.debug("Drawing text component {}", text);
-//        canvas.drawTextBlob(textBlob, boundingBox.getLeft(), boundingBox.getTop(), paint);
         paragraph.paint(canvas, boundingBox.getLeft(), boundingBox.getTop());
         redrawHelper.markCanvasUpToDate(canvas);
     }

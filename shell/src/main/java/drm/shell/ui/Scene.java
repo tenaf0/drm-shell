@@ -60,14 +60,20 @@ public final class Scene implements Node {
             }
         }
 
-        List<Node> nodes = children.stream()
-                .filter(n -> n.needsRedraw(canvas)).toList();
-        Logger.debug("Issuing draw for these: {}", nodes);
-        nodes.forEach(node -> {
-            canvas.drawRect(node.boundingBox(), backgroundPaint);
-            node.damage(node.boundingBox());
-            node.draw(canvas);
-        });
+        children.stream()
+                .filter(n -> n.needsRedraw(canvas))
+                .forEach(node -> {
+                    canvas.drawRect(node.boundingBox(), backgroundPaint);
+                    node.forceDraw(canvas);
+                });
+    }
+
+    @Override
+    public void forceDraw(Canvas canvas) {
+        canvas.drawRect(boundingBox, backgroundPaint);
+        children.forEach(node -> {
+                    node.forceDraw(canvas);
+                });
     }
 
     private final RedrawHelper redrawHelper = new RedrawHelper();
@@ -86,10 +92,8 @@ public final class Scene implements Node {
         }
         damagedRegion = damagedRegion.inflate(0.1f);
 
-        List<Node> nodes = children.stream()
-                .filter(n -> n.boundingBox().intersect(damagedRegion) != null).toList();
-        Logger.debug("Damaging scene at {} resulted in damagedRegion {}\nintersected children: {}",
-                rect, damagedRegion, nodes);
-        nodes.forEach(n -> n.damage(rect));
+        children.stream()
+                .filter(n -> n.boundingBox().intersect(damagedRegion) != null)
+                .forEach(n -> n.damage(rect));
     }
 }
