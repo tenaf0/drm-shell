@@ -1,9 +1,11 @@
 {
-  description = "A very basic flake";
+  description = "A flake creating the developer environment of drm-shell";
   
   inputs = {
     nixpkgs-jdk20.url = "github:tenaf0/nixpkgs/openjdk20";
     jextract.url = "github:tenaf0/jextract-flake";
+    jextract.inputs.nixpkgs.follows = "nixpkgs";
+    jextract.inputs.flake-utils.follows = "flake-utils";
   };
 
   outputs = { self, nixpkgs, flake-utils, nixpkgs-jdk20, jextract }: 

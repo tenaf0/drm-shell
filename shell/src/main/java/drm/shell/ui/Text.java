@@ -18,7 +18,7 @@ public final class Text implements Node {
 
     private static final Font font = new Font();
     static {
-        font.setTypeface(Typeface.makeFromName("Source Code Pro", FontStyle.NORMAL));
+        font.setTypeface(Typeface.makeFromName("Cantarell", FontStyle.NORMAL));
         font.setSize(20.0f);
     }
 
@@ -40,7 +40,7 @@ public final class Text implements Node {
 
         ParagraphStyle style = new ParagraphStyle();
         TextStyle textStyle = new TextStyle();
-        textStyle.setTypeface(Typeface.makeFromName("Source Code Pro", FontStyle.NORMAL));
+        textStyle.setTypeface(font.getTypeface());
         textStyle.setFontSize(20.0f);
         textStyle.setColor(paint.getColor());
         style.setTextStyle(textStyle);

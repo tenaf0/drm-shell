@@ -44,17 +44,19 @@ public class App implements Renderer {
     public void init(int width, int height) {
         this.width = width;
         this.height = height;
-        scene = new Scene(Rect.makeXYWH(0f, 0f, width, height), new Paint().setColor(Color.makeRGB(210,210,210)));
-        final var topBar = new Scene(Rect.makeXYWH(0f, 0f, width, 30f), new Paint().setColor(Color.makeRGB(20, 20, 20)));
+        scene = new Scene(Rect.makeXYWH(0f, 0f, width, height), new Paint().setColor(Color.makeRGB(224, 226, 219)));
+        final var topBar = new Scene(Rect.makeXYWH(0f, 0f, width, 30f), new Paint().setColor(Color.makeRGB(37, 9, 2)));
         topBar.setParent(scene);
 
-        final var clock = new Text(topBar, "Clock", new Paint().setColor(Color.makeRGB(255, 255, 255)),
+        final var clock = new Text(topBar, "Clock", new Paint().setColor(Color.makeRGB(224, 226, 219)),
                 new Position(width-90, 5f), 90f);
-        final var manual = new Text(scene, "Press 1-9 to switch to VTTY,\n'R' to take screenshot,\n'Q' to exit.", new Paint().setColor(Color.makeRGB(169, 30, 30)),
+
+        Paint paint = new Paint().setColor(Color.makeRGB(100, 13, 20));
+        final var manual = new Text(scene, "Press 1-9 to switch to VTTY,\n'R' to take screenshot,\n'Q' to exit.", paint,
                 new Position(60f, 50f), 400f);
-        keyText = new Text(scene, "Key press", new Paint().setColor(Color.makeRGB(169, 30, 30)),
+        keyText = new Text(scene, "Key press", paint,
                 new Position(60f, 160f), 200f);
-        Text freeText = new Text(scene, "", new Paint().setColor(Color.makeRGB(169, 30, 30)),
+        Text freeText = new Text(scene, "", paint,
                 new Position(60f, 400f), 900f);
 
         Thread thread = new Thread(() -> {
@@ -89,10 +91,10 @@ public class App implements Renderer {
     public void handleEvent(Session session, Event event) {
         switch (event) {
             case PointerEvent(float dx,float dy) -> {
-                scene.damage(Rect.makeXYWH(AppState.x, AppState.y, POINTER_SIZE, POINTER_SIZE));
+                scene.damage(Rect.makeXYWH(AppState.x, AppState.y, CURSOR_SIZE, CURSOR_SIZE));
 
-                AppState.x = Math.min(Math.max(0, AppState.x + dx), scene.boundingBox().getRight() - POINTER_SIZE);
-                AppState.y = Math.min(Math.max(0.0f, AppState.y + dy), scene.boundingBox().getBottom() - POINTER_SIZE);
+                AppState.x = Math.min(Math.max(0, AppState.x + dx), scene.boundingBox().getRight() - CURSOR_SIZE);
+                AppState.y = Math.min(Math.max(0.0f, AppState.y + dy), scene.boundingBox().getBottom() - CURSOR_SIZE);
                 Logger.debug("{} {}\n", AppState.x, AppState.y);
             }
             case KeyboardEvent(boolean b,char key) -> {
