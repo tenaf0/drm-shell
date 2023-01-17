@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 public class App implements Renderer {
 
-    private static final float POINTER_SIZE = 10.0f;
+    private static final int CURSOR_SIZE = 15;
 
     private Queue<Consumer<App>> actionQueue = new ArrayBlockingQueue<>(10);
 
@@ -130,13 +130,26 @@ public class App implements Renderer {
     private long renderCount = 0;
     private long renderTime = 0;
 
+    private static Surface cursor = Surface.makeRasterN32Premul(CURSOR_SIZE, CURSOR_SIZE);
+    static {
+        Canvas canvas = cursor.getCanvas();
+        org.jetbrains.skija.Path cursorPath = org.jetbrains.skija.Path.makeFromSVGString("M 1 0 L 1 15 L 10 12 L 1 0");
+        canvas.drawPath(cursorPath, new Paint());
+        canvas.drawPath(cursorPath, new Paint()
+                .setColor(Color.makeRGB(255, 255, 255))
+                .setStroke(true)
+                .setStrokeWidth(1.5f));
+    }
+
+
     @Override
     public void render(Canvas canvas) {
         long l = System.nanoTime();
 
         scene.draw(canvas);
 
-        canvas.drawRect(Rect.makeXYWH(AppState.x, AppState.y, POINTER_SIZE, POINTER_SIZE), red);
+        cursor.draw(canvas, (int) AppState.x, (int) AppState.y, null);
+
         if (takeScreenshot) {
             new Thread(() -> {
                 Bitmap bitmap = new Bitmap();
