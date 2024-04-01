@@ -9,7 +9,8 @@ import drm.shell.drm.event.TickEvent;
 import drm.shell.ui.Position;
 import drm.shell.ui.Scene;
 import drm.shell.ui.Text;
-import org.jetbrains.skija.*;
+import io.github.humbleui.skija.*;
+import io.github.humbleui.types.Rect;
 import org.tinylog.Logger;
 
 import java.io.*;
@@ -133,7 +134,7 @@ public class App implements Renderer {
     private static Surface cursor = Surface.makeRasterN32Premul(CURSOR_SIZE, CURSOR_SIZE);
     static {
         Canvas canvas = cursor.getCanvas();
-        org.jetbrains.skija.Path cursorPath = org.jetbrains.skija.Path.makeFromSVGString("M 1 0 L 1 15 L 10 12 L 1 0");
+        io.github.humbleui.skija.Path cursorPath = io.github.humbleui.skija.Path.makeFromSVGString("M 1 0 L 1 15 L 10 12 L 1 0");
         canvas.drawPath(cursorPath, new Paint());
         canvas.drawPath(cursorPath, new Paint()
                 .setColor(Color.makeRGB(255, 255, 255))

@@ -8,9 +8,9 @@ import drm.shell.drm.seat.Seat;
 import hu.garaba.CWrapper;
 import hu.garaba.EventLoop;
 import hu.garaba.drm._drmEventContext;
-import org.jetbrains.skija.Canvas;
-import org.jetbrains.skija.ImageInfo;
-import org.jetbrains.skija.Surface;
+import io.github.humbleui.skija.Canvas;
+import io.github.humbleui.skija.ImageInfo;
+import io.github.humbleui.skija.Surface;
 import org.tinylog.Logger;
 
 import java.io.IOException;

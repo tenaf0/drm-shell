@@ -1,7 +1,7 @@
 package drm.shell.drm;
 
 import drm.shell.drm.event.Event;
-import org.jetbrains.skija.Canvas;
+import io.github.humbleui.skija.Canvas;
 
 public interface Renderer {
     void init(int width, int height);

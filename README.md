@@ -1,10 +1,10 @@
 # drm-shell
 
-A toy graphical shell running directly on top of Linux's DRM subsystem written in modern Java (20, early access)
+A toy graphical shell running directly on top of Linux's DRM subsystem written in modern Java (22, early access)
 using Foreign Function & Memory API. 
 
 The project includes high-level wrappers for libdrm, libinput and libseat and it has a basic poll loop for listening to events. 
-It uses double-buffering with vsync and renders via Skija (https://github.com/JetBrains/skija). The program also features
+It uses double-buffering with vsync and renders via Skija (https://github.com/HumbleUI/Skija/). The program also features
 a very basic GUI toolkit that handles damages/redraws.
 
 ## Installation

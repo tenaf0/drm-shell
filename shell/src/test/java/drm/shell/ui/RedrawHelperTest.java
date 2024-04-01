@@ -1,7 +1,7 @@
 package drm.shell.ui;
 
-import org.jetbrains.skija.Canvas;
-import org.jetbrains.skija.Surface;
+import io.github.humbleui.skija.Canvas;
+import io.github.humbleui.skija.Surface;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

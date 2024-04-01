@@ -1,7 +1,8 @@
 package drm.shell.ui;
 
-import org.jetbrains.skija.*;
-import org.jetbrains.skija.paragraph.*;
+import io.github.humbleui.skija.*;
+import io.github.humbleui.skija.paragraph.*;
+import io.github.humbleui.types.Rect;
 import org.tinylog.Logger;
 
 import java.util.List;

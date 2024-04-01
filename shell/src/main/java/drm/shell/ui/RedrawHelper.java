@@ -1,6 +1,6 @@
 package drm.shell.ui;
 
-import org.jetbrains.skija.Canvas;
+import io.github.humbleui.skija.Canvas;
 
 public class RedrawHelper {
     private Canvas canvas;

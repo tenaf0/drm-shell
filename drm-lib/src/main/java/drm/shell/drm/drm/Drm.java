@@ -25,7 +25,8 @@ public class Drm implements AutoCloseable, Pollable {
         this.arena = Arena.ofConfined();
 
         MemorySegment resourceAddr = drmModeGetResources(fd);
-        this.resource = MemorySegment.ofAddress(resourceAddr.address()).reinterpret(_drmModeRes.layout().byteSize(), arena, ms -> drmModeFreeResources(resourceAddr));
+        this.resource = MemorySegment.ofAddress(resourceAddr.address())
+                .reinterpret(_drmModeRes.layout().byteSize(), arena, ms -> drmModeFreeResources(resourceAddr));
     }
 
     public static Drm open(Path driDevice) throws IOException {

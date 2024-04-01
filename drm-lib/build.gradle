@@ -4,5 +4,5 @@ plugins {
 
 dependencies {
     api project(":cffi")
-    api "org.jetbrains.skija:skija-linux:0.93.1"
+    api 'io.github.humbleui:skija-linux-x64:0.116.2'
 }

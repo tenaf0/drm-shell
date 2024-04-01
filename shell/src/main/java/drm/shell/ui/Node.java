@@ -1,7 +1,7 @@
 package drm.shell.ui;
 
-import org.jetbrains.skija.Canvas;
-import org.jetbrains.skija.Rect;
+import io.github.humbleui.skija.Canvas;
+import io.github.humbleui.types.Rect;
 
 import java.util.List;
 
