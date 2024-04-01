@@ -2,8 +2,8 @@ package drm.shell.drm.drm;
 
 import hu.garaba.drmMode._drmModeModeInfo;
 
+import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SegmentScope;
 
 public record Mode(
         int clock,
@@ -14,12 +14,13 @@ public record Mode(
         ) {
 
     static Mode fromStruct(MemorySegment modeInfo) {
-        int clock = _drmModeModeInfo.clock$get(modeInfo);
-        short hdisplay = _drmModeModeInfo.hdisplay$get(modeInfo);
-        short vdisplay = _drmModeModeInfo.vdisplay$get(modeInfo);
-        String name = _drmModeModeInfo.name$slice(modeInfo).getUtf8String(0);
+        int clock = _drmModeModeInfo.clock(modeInfo);
+        short hdisplay = _drmModeModeInfo.hdisplay(modeInfo);
+        short vdisplay = _drmModeModeInfo.vdisplay(modeInfo);
+        String name = _drmModeModeInfo.name(modeInfo).getString(0);
 
-        MemorySegment struct = MemorySegment.allocateNative(_drmModeModeInfo.$LAYOUT(), SegmentScope.auto());
+        Arena arena = Arena.ofAuto();
+        MemorySegment struct = arena.allocate(_drmModeModeInfo.layout());
         struct.copyFrom(modeInfo);
         return new Mode(clock, hdisplay, vdisplay, name, struct);
     }

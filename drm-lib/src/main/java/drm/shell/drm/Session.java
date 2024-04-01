@@ -143,18 +143,18 @@ public class Session implements AutoCloseable {
 
         VSync.renderer = this.renderer;
 
-        MemorySegment eventContext = _drmEventContext.allocate(Arena.openConfined());
-        _drmEventContext.version$set(eventContext, 4);
+        MemorySegment eventContext = _drmEventContext.allocate(Arena.ofConfined());
+        _drmEventContext.version(eventContext, 4);
 
         MemorySegment vsyncHandle;
         try {
             vsyncHandle = Linker.nativeLinker().upcallStub(MethodHandles.lookup().findStatic(VSync.class, "vsyncHandle", MethodType.methodType(void.class)),
-                    FunctionDescriptor.ofVoid(), SegmentScope.global());
+                    FunctionDescriptor.ofVoid(), Arena.global());
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
 
-        _drmEventContext.page_flip_handler$set(eventContext, vsyncHandle);
+        _drmEventContext.page_flip_handler(eventContext, vsyncHandle);
 
         eventLoop.addHandler(drm, () -> drmHandleEvent(drm.fd, eventContext));
     }

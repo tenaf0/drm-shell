@@ -3,6 +3,7 @@ package hu.garaba;
 import hu.garaba.linux.pollfd;
 
 import java.lang.foreign.Arena;
+import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,16 +37,16 @@ public class EventLoop {
             throw new IllegalStateException("Pollable objects and event handlers have different number of elements");
         }
 
-        try (final var arena = Arena.openConfined()) {
-            MemorySegment pollfdArr = arena.allocateArray(pollfd.$LAYOUT(), pollableList.size());
-            List<MemorySegment> pollFdList = pollfdArr.elements(pollfd.$LAYOUT()).toList();
+        try (final var arena = Arena.ofConfined()) {
+            MemorySegment pollfdArr = arena.allocate(MemoryLayout.sequenceLayout(pollableList.size(), pollfd.layout()));
+            List<MemorySegment> pollFdList = pollfdArr.elements(pollfd.layout()).toList();
 
             IntStream.range(0, pollableList.size())
                     .forEach(i -> {
                         MemorySegment pollfdStruct = pollFdList.get(i);
-                        pollfd.fd$set(pollfdStruct, pollableList.get(i).fd());
-                        pollfd.events$set(pollfdStruct, (short) POLLIN());
-                        pollfd.revents$set(pollfdStruct, (short) 0);
+                        pollfd.fd(pollfdStruct, pollableList.get(i).fd());
+                        pollfd.events(pollfdStruct, (short) POLLIN());
+                        pollfd.revents(pollfdStruct, (short) 0);
                     });
 
             isRunning = true;
@@ -56,7 +57,7 @@ public class EventLoop {
                             .forEach(i -> {
                                 MemorySegment pollfdStruct = pollFdList.get(i);
 
-                                if ((pollfd.revents$get(pollfdStruct) & POLLIN()) > 0) {
+                                if ((pollfd.revents(pollfdStruct) & POLLIN()) > 0) {
                                     eventHandlers.get(i).run();
                                 }
                             });

@@ -28,7 +28,7 @@ public class Libinput implements Pollable {
         MemorySegment libinputInterface = createLibinputInterface();
         MemorySegment udev = udev_new();
 
-        MemorySegment userDataSegment = MemorySegment.allocateNative(ValueLayout.JAVA_INT, seat.scope());
+        MemorySegment userDataSegment = seat.arena().allocate(ValueLayout.JAVA_INT);
         userDataSegment.set(ValueLayout.JAVA_INT, 0, seat.id());
 
         MemorySegment libinput = libinput_udev_create_context(libinputInterface, userDataSegment, udev);
@@ -37,10 +37,10 @@ public class Libinput implements Pollable {
         }
         int fd = (int) CWrapper.execute(() -> libinput_get_fd(libinput), "Could not create libinput context on seat " + seat);
 
-        try (final var arena = Arena.openConfined()) {
+        try (final var arena = Arena.ofConfined()) {
             String seatName = seat.name();
-            MemorySegment stringSegment = MemorySegment.allocateNative(seatName.length() + 1, arena.scope());
-            stringSegment.setUtf8String(0, seatName);
+            MemorySegment stringSegment = arena.allocate(seatName.length() + 1);
+            stringSegment.setString(0, seatName);
             CWrapper.execute(() -> (long) libinput_udev_assign_seat(libinput, stringSegment), "Could not assign seat " + seatName + " to libinput context");
         }
 
@@ -57,9 +57,9 @@ public class Libinput implements Pollable {
 
         MemorySegment unsafeEventPtr;
         while ((unsafeEventPtr = libinput_get_event(libinputContext)).address() > 0) {
-            try (final var arena = Arena.openConfined()) {
+            try (final var arena = Arena.ofConfined()) {
                 final var finalUnsafeEventPtr = unsafeEventPtr;
-                MemorySegment eventPtr = MemorySegment.ofAddress(unsafeEventPtr.address(), 0, arena.scope(), () -> libinput_event_destroy(finalUnsafeEventPtr));
+                MemorySegment eventPtr = MemorySegment.ofAddress(unsafeEventPtr.address()).reinterpret(0, arena, ms -> libinput_event_destroy(finalUnsafeEventPtr));
                 eventHandler.accept(eventPtr);
             }
         }
@@ -82,12 +82,12 @@ public class Libinput implements Pollable {
                     MethodType.methodType(int.class, MemorySegment.class, int.class, MemorySegment.class));
             MethodHandle closeRestricted = MethodHandles.lookup().findStatic(LibinputInterfaceImplementation.class, "closeRestricted",
                     MethodType.methodType(void.class, int.class, MemorySegment.class));
-            MemorySegment openRestrictedStub = linker.upcallStub(openRestricted, FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS), SegmentScope.global());
-            MemorySegment closeRestrictedStub = linker.upcallStub(closeRestricted, FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.ADDRESS), SegmentScope.global());
+            MemorySegment openRestrictedStub = linker.upcallStub(openRestricted, FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS), Arena.global());
+            MemorySegment closeRestrictedStub = linker.upcallStub(closeRestricted, FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.ADDRESS), Arena.global());
 
-            MemorySegment libinputInterface = MemorySegment.allocateNative(libinput_interface.$LAYOUT(), SegmentScope.global());
-            libinput_interface.open_restricted$set(libinputInterface, openRestrictedStub);
-            libinput_interface.close_restricted$set(libinputInterface, closeRestrictedStub);
+            MemorySegment libinputInterface = Arena.global().allocate(libinput_interface.layout());
+            libinput_interface.open_restricted(libinputInterface, openRestrictedStub);
+            libinput_interface.close_restricted(libinputInterface, closeRestrictedStub);
             return libinputInterface;
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
@@ -96,15 +96,15 @@ public class Libinput implements Pollable {
 
     private static class LibinputInterfaceImplementation {
         private static Seat getSeat(MemorySegment userData) {
-            MemorySegment userDataSafe = MemorySegment.ofAddress(userData.address(), ValueLayout.JAVA_INT.byteSize(), SegmentScope.auto());
+            MemorySegment userDataSafe = MemorySegment.ofAddress(userData.address()).reinterpret( ValueLayout.JAVA_INT.byteSize(), Arena.ofAuto(), null);
             int sessionId = userDataSafe.get(ValueLayout.JAVA_INT, 0);
             Session session = Session.sessions.get(sessionId);
             return session.seat();
         }
         static int openRestricted(MemorySegment path, int flags, MemorySegment userData) {
-            MemorySegment safePath = MemorySegment.ofAddress(path.address(), Long.MAX_VALUE, SegmentScope.auto());
-            Logger.debug("Opening " + safePath.getUtf8String(0));
-            return (int) CWrapper.execute(() -> getSeat(userData).openDevice(safePath), "Could not open file " + safePath.getUtf8String(0));
+            MemorySegment safePath = MemorySegment.ofAddress(path.address()).reinterpret(Long.MAX_VALUE, Arena.ofAuto(), null);
+            Logger.debug("Opening " + safePath.getString(0));
+            return (int) CWrapper.execute(() -> getSeat(userData).openDevice(safePath), "Could not open file " + safePath.getString(0));
         }
 
         static void closeRestricted(int fd, MemorySegment userData) {

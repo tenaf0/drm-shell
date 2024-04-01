@@ -50,16 +50,16 @@ public class Seat implements AutoCloseable, Pollable {
     public String name() {
         if (lazyName == null) {
             MemorySegment seatNameC = libseat_seat_name(libseat);
-            try (final var arena = Arena.openConfined()) {
-                lazyName = MemorySegment.ofAddress(seatNameC.address(), Long.MAX_VALUE, arena.scope()).getUtf8String(0);
+            try (final var arena = Arena.ofConfined()) {
+                lazyName = MemorySegment.ofAddress(seatNameC.address()).reinterpret(Long.MAX_VALUE, arena, null).getString(0);
             }
         }
 
         return lazyName;
     }
 
-    public SegmentScope scope() {
-        return arena.scope();
+    public Arena arena() {
+        return arena;
     }
 
     public void initLibinput() {
@@ -87,7 +87,7 @@ public class Seat implements AutoCloseable, Pollable {
     }
 
     public int openDevice(MemorySegment path) {
-        try (final var arena = Arena.openConfined()) {
+        try (final var arena = Arena.ofConfined()) {
             MemorySegment fd = arena.allocate(ValueLayout.JAVA_INT);
             int deviceId = (int) CWrapper.execute(() -> libseat_open_device(libseat, path, fd),
                     "Could not open seat device");
@@ -117,9 +117,9 @@ public class Seat implements AutoCloseable, Pollable {
     }
 
     public static Seat openSeat(int sessionId) {
-        final var arena = Arena.openConfined();
+        final var arena = Arena.ofConfined();
 
-        MemorySegment sessionIdAddress = MemorySegment.allocateNative(ValueLayout.JAVA_INT, SegmentScope.global());
+        MemorySegment sessionIdAddress = Arena.global().allocate(ValueLayout.JAVA_INT);
         sessionIdAddress.set(ValueLayout.JAVA_INT, 0, sessionId);
 
         MemorySegment libseat = libseat_open_seat(createSeatListener(), sessionIdAddress);
@@ -127,8 +127,8 @@ public class Seat implements AutoCloseable, Pollable {
         if (fd < 0) {
             throw new RuntimeException("Could not get libseat fd");
         }
-        return new Seat(sessionId, arena, MemorySegment.ofAddress(libseat.address(), 0, arena.scope(),
-                () -> CWrapper.execute(() -> libseat_close_seat(libseat), "Failure during the closing of seat")), fd);
+        return new Seat(sessionId, arena, MemorySegment.ofAddress(libseat.address()).reinterpret(arena,
+                ms -> CWrapper.execute(() -> libseat_close_seat(libseat), "Failure during the closing of seat")), fd);
     }
 
     public String getActiveSession() {
@@ -148,16 +148,16 @@ public class Seat implements AutoCloseable, Pollable {
         Linker linker = Linker.nativeLinker();
 
         try {
-            MemorySegment seatListener = MemorySegment.allocateNative(libseat_seat_listener.$LAYOUT(), SegmentScope.global());
+            MemorySegment seatListener = Arena.global().allocate(libseat_seat_listener.layout());
             MemorySegment enableSeat = linker.upcallStub(MethodHandles.lookup().findStatic(SeatListener.class, "enableSeat",
                             MethodType.methodType(void.class, MemorySegment.class, MemorySegment.class)),
-                    FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS), SegmentScope.global());
+                    FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS), Arena.global());
             MemorySegment disableSeat = linker.upcallStub(MethodHandles.lookup().findStatic(SeatListener.class, "disableSeat",
                             MethodType.methodType(void.class, MemorySegment.class, MemorySegment.class)),
-                    FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS), SegmentScope.global());
+                    FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS), Arena.global());
 
-            libseat_seat_listener.enable_seat$set(seatListener, enableSeat);
-            libseat_seat_listener.disable_seat$set(seatListener, disableSeat);
+            libseat_seat_listener.enable_seat(seatListener, enableSeat);
+            libseat_seat_listener.disable_seat(seatListener, disableSeat);
 
             return seatListener;
         } catch (NoSuchMethodException | IllegalAccessException e) {
@@ -167,7 +167,7 @@ public class Seat implements AutoCloseable, Pollable {
 
     private static class SeatListener {
         public static void enableSeat(MemorySegment seat, MemorySegment userData) {
-            MemorySegment data = MemorySegment.ofAddress(userData.address(), ValueLayout.JAVA_INT.byteSize(), SegmentScope.auto());
+            MemorySegment data = userData.reinterpret(ValueLayout.JAVA_INT.byteSize());
             Logger.debug("Activating from seatListener");
             Session.sessions.get(data.get(ValueLayout.JAVA_INT, 0)).activate();
         }

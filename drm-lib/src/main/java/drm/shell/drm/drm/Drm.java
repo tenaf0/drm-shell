@@ -22,10 +22,10 @@ public class Drm implements AutoCloseable, Pollable {
 
     private Drm(int fd) {
         this.fd = fd;
-        this.arena = Arena.openConfined();
+        this.arena = Arena.ofConfined();
 
         MemorySegment resourceAddr = drmModeGetResources(fd);
-        this.resource = MemorySegment.ofAddress(resourceAddr.address(), _drmModeRes.$LAYOUT().byteSize(), arena.scope(), () -> drmModeFreeResources(resourceAddr));
+        this.resource = MemorySegment.ofAddress(resourceAddr.address()).reinterpret(_drmModeRes.layout().byteSize(), arena, ms -> drmModeFreeResources(resourceAddr));
     }
 
     public static Drm open(Path driDevice) throws IOException {
@@ -35,9 +35,9 @@ public class Drm implements AutoCloseable, Pollable {
     }
 
     public List<Crtc> fetchCrtcs() {
-        int count = _drmModeRes.count_crtcs$get(resource);
-        MemorySegment crtcsArr = MemorySegment.ofAddress(_drmModeRes.crtcs$get(resource).address(),
-                ValueLayout.JAVA_INT.byteSize() * count, arena.scope());
+        int count = _drmModeRes.count_crtcs(resource);
+        MemorySegment crtcsArr = MemorySegment.ofAddress(_drmModeRes.crtcs(resource).address())
+                .reinterpret(ValueLayout.JAVA_INT.byteSize() * count, arena, null);
 
         return crtcsArr.elements(ValueLayout.JAVA_INT)
                 .map(s -> s.get(ValueLayout.JAVA_INT, 0))
@@ -46,9 +46,9 @@ public class Drm implements AutoCloseable, Pollable {
     }
 
     public List<Connector> fetchConnectors() {
-        int count = _drmModeRes.count_connectors$get(resource);
-        MemorySegment connectorsArr = MemorySegment.ofAddress(_drmModeRes.connectors$get(resource).address(),
-                ValueLayout.JAVA_INT.byteSize() * count, arena.scope());
+        int count = _drmModeRes.count_connectors(resource);
+        MemorySegment connectorsArr = MemorySegment.ofAddress(_drmModeRes.connectors(resource).address())
+                .reinterpret(ValueLayout.JAVA_INT.byteSize() * count, arena, null);
 
         return connectorsArr.elements(ValueLayout.JAVA_INT)
                 .map(s -> s.get(ValueLayout.JAVA_INT, 0))
@@ -57,9 +57,9 @@ public class Drm implements AutoCloseable, Pollable {
     }
 
     public List<Encoder> fetchEncoders() {
-        int count = _drmModeRes.count_encoders$get(resource);
-        MemorySegment encodersArr = MemorySegment.ofAddress(_drmModeRes.encoders$get(resource).address(),
-                ValueLayout.JAVA_INT.byteSize() * count, arena.scope());
+        int count = _drmModeRes.count_encoders(resource);
+        MemorySegment encodersArr = MemorySegment.ofAddress(_drmModeRes.encoders(resource).address())
+                .reinterpret(ValueLayout.JAVA_INT.byteSize() * count, arena, null);
 
         return encodersArr.elements(ValueLayout.JAVA_INT)
                 .map(s -> s.get(ValueLayout.JAVA_INT, 0))
@@ -72,7 +72,7 @@ public class Drm implements AutoCloseable, Pollable {
     }
 
     public void setMode(Crtc crtc, Connector connector, Mode mode, int fbId) {
-        try (final var arena = Arena.openConfined()) {
+        try (final var arena = Arena.ofConfined()) {
             MemorySegment connectorArr = arena.allocate(ValueLayout.JAVA_INT);
             connectorArr.set(ValueLayout.JAVA_INT, 0, connector.connectorId);
             CWrapper.execute(() -> drmModeSetCrtc(fd, crtc.crtcId, fbId, 0, 0, connectorArr, 1, mode.modeStruct()));

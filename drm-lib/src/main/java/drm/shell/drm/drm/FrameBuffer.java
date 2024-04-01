@@ -35,26 +35,27 @@ public class FrameBuffer {
 
     public static FrameBuffer create(Drm drm, short width, short height) {
         final byte bpp = 32;
-        try (final var arena = Arena.openConfined()) {
+        try (final var arena = Arena.ofConfined()) {
             MemorySegment fbSegment = arena.allocate(ValueLayout.JAVA_INT);
 
             MemorySegment createRequest = drm_mode_create_dumb.allocate(arena);
-            drm_mode_create_dumb.width$set(createRequest, width);
-            drm_mode_create_dumb.height$set(createRequest, height);
-            drm_mode_create_dumb.bpp$set(createRequest, bpp);
+            drm_mode_create_dumb.width(createRequest, width);
+            drm_mode_create_dumb.height(createRequest, height);
+            drm_mode_create_dumb.bpp(createRequest, bpp);
             CWrapper.execute(() -> drmIoctl(drm.fd, DRM_IOCTL_MODE_CREATE_DUMB(), createRequest), "Can't create dumb buffer");
-            int pitch = drm_mode_create_dumb.pitch$get(createRequest);
-            long size = drm_mode_create_dumb.size$get(createRequest);
-            int handle = drm_mode_create_dumb.handle$get(createRequest);
+            int pitch = drm_mode_create_dumb.pitch(createRequest);
+            long size = drm_mode_create_dumb.size(createRequest);
+            int handle = drm_mode_create_dumb.handle(createRequest);
 
             CWrapper.execute(() -> (long) drmModeAddFB(drm.fd, width, height, (byte)24, bpp,
                     pitch, handle, fbSegment), "Can't create dumb buffer");
 
             MemorySegment mapRequest = drm_mode_map_dumb.allocate(arena);
-            drm_mode_map_dumb.handle$set(mapRequest, handle);
+            drm_mode_map_dumb.handle(mapRequest, handle);
             CWrapper.execute(() -> drmIoctl(drm.fd, DRM_IOCTL_MODE_MAP_DUMB(), mapRequest), "Can't map dumb buffer");
 
-            MemorySegment dumbBuffer = Util.mmap(size, PROT_READ() | PROT_WRITE(), MAP_SHARED(), drm.fd, drm_mode_map_dumb.offset$get(mapRequest), drm.arena.scope());
+            MemorySegment dumbBuffer = Util.mmap(size, PROT_READ() | PROT_WRITE(), MAP_SHARED(), drm.fd,
+                    drm_mode_map_dumb.offset(mapRequest), drm.arena);
 
             return new FrameBuffer(drm, fbSegment.get(ValueLayout.JAVA_INT, 0), handle, dumbBuffer);
         }

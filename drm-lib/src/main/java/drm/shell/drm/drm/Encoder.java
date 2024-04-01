@@ -15,13 +15,14 @@ public record Encoder(
         ) {
 
     static Encoder create(Drm drm, int encoderId) {
-        try (final var arena = Arena.openConfined()) {
+        try (final var arena = Arena.ofConfined()) {
             MemorySegment encoderAddr = drmModeGetEncoder(drm.fd, encoderId);
-            MemorySegment encoder = MemorySegment.ofAddress(encoderAddr.address(), _drmModeEncoder.$LAYOUT().byteSize(), arena.scope(), () -> drmModeFreeEncoder(encoderAddr));
+            MemorySegment encoder = MemorySegment.ofAddress(encoderAddr.address())
+                    .reinterpret(_drmModeEncoder.layout().byteSize(), arena, ms -> drmModeFreeEncoder(encoderAddr));
 
             return new Encoder(encoderId,
-                    _drmModeEncoder.encoder_type$get(encoder),
-                    _drmModeEncoder.crtc_id$get(encoder));
+                    _drmModeEncoder.encoder_type(encoder),
+                    _drmModeEncoder.crtc_id(encoder));
         }
     }
 }

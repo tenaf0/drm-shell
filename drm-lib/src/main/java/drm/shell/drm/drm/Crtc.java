@@ -23,18 +23,18 @@ public class Crtc {
     }
 
     public void sync() {
-        try (final var arena = Arena.openConfined()) {
+        try (final var arena = Arena.ofConfined()) {
             MemorySegment crtcAddr = drmModeGetCrtc(drm.fd, crtcId);
-            MemorySegment crtc = MemorySegment.ofAddress(crtcAddr.address(), _drmModeCrtc.$LAYOUT().byteSize(), arena.scope(), () -> drmModeFreeCrtc(crtcAddr));
+            MemorySegment crtc = MemorySegment.ofAddress(crtcAddr.address()).reinterpret(_drmModeCrtc.layout().byteSize(), arena, ms -> drmModeFreeCrtc(crtcAddr));
 
-            int bufferId = _drmModeCrtc.buffer_id$get(crtc);
-            int x = _drmModeCrtc.x$get(crtc);
-            int y = _drmModeCrtc.y$get(crtc);
-            int width = _drmModeCrtc.width$get(crtc);
-            int height = _drmModeCrtc.height$get(crtc);
-            int modeValid = _drmModeCrtc.mode_valid$get(crtc);
-            Mode mode = Mode.fromStruct(_drmModeCrtc.mode$slice(crtc));
-            int gammaSize = _drmModeCrtc.gamma_size$get(crtc);
+            int bufferId = _drmModeCrtc.buffer_id(crtc);
+            int x = _drmModeCrtc.x(crtc);
+            int y = _drmModeCrtc.y(crtc);
+            int width = _drmModeCrtc.width(crtc);
+            int height = _drmModeCrtc.height(crtc);
+            int modeValid = _drmModeCrtc.mode_valid(crtc);
+            Mode mode = Mode.fromStruct(_drmModeCrtc.mode(crtc));
+            int gammaSize = _drmModeCrtc.gamma_size(crtc);
 
             this.info = new Info(bufferId, x, y, width, height, modeValid, mode, gammaSize);
         }

@@ -45,11 +45,11 @@ public class CWrapper {
         if (res < 0) {
             int errno = errno();
             String errorMessage;
-            try (Arena arena = Arena.openConfined()) {
+            try (Arena arena = Arena.ofConfined()) {
                 MemorySegment strerrorC = strerror(errno);
-                MemorySegment strErrorSafe = MemorySegment.ofAddress(strerrorC.address(), Long.MAX_VALUE, arena.scope());
+                MemorySegment strErrorSafe = strerrorC.reinterpret(Long.MAX_VALUE, arena, null);
 
-                errorMessage = strErrorSafe.getUtf8String(0);
+                errorMessage = strErrorSafe.getString(0);
             }
 
             throw new CException(res, errno, errorMessage, userErrorMessage);

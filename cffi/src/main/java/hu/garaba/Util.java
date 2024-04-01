@@ -25,9 +25,9 @@ public class Util {
     }
 
     public static int open(String fileName, int flags) throws IOException {
-        try (final var arena = Arena.openConfined()) {
-            MemorySegment fileNameSegment = MemorySegment.allocateNative(fileName.getBytes(StandardCharsets.UTF_8).length + 1, arena.scope());
-            fileNameSegment.setUtf8String(0, fileName);
+        try (final var arena = Arena.ofConfined()) {
+            MemorySegment fileNameSegment = arena.allocate(fileName.getBytes(StandardCharsets.UTF_8).length + 1);
+            fileNameSegment.setString(0, fileName);
 
             return open(fileNameSegment, flags);
         }
@@ -47,10 +47,10 @@ public class Util {
         return fd;
     }
 
-    public static MemorySegment mmap(long length, int protection, int flag, int fd, long offset, SegmentScope session) {
+    public static MemorySegment mmap(long length, int protection, int flag, int fd, long offset, Arena arena) {
         try {
             MemorySegment retAddress = (MemorySegment) mmap.invokeExact(MemorySegment.NULL, length, protection, flag, fd, offset);
-            return MemorySegment.ofAddress(retAddress.address(), length, session);
+            return retAddress.reinterpret(length, arena, ms -> { /* TODO: Free mmap */});
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
